@@ -25,7 +25,7 @@ geoip
 version: "2"
 
 services:
- minetest:
+ geoip:
   image: klauspost/geoip-service
   restart: always
   ports:
