@@ -30,7 +30,8 @@ minetest.register_chatcommand("geoip", {
       return true, "usage: /geoip <playername>"
     end
 
-		local player = minetest.get_player_by_name(name)
+	minetest.log("action", "[geoip] Player " .. name .. " queries the player: " .. param)
+
     local is_verbose = minetest.check_player_privs(name, {geoip_verbose = true})
 
     if not minetest.get_player_ip then
@@ -63,6 +64,8 @@ minetest.register_chatcommand("geoip", {
             txt = txt .. " IP: " .. ip
           end
         end
+
+	minetest.log("action", "[geoip] result for player " .. param .. ": " .. txt)
 
         minetest.chat_send_player(name, txt)
       else

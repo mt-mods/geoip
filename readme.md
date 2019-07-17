@@ -15,9 +15,9 @@ geoip.url = http://127.0.0.1:5000
 
 
 ### privs
-```
-geoip
-```
+
+* `geoip` geoip query with basic responses (country, city)
+* `geoip_verbose` geoip query with additional ip-address
 
 ### docker compose
 
