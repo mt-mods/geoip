@@ -5,7 +5,8 @@ geoip = {
 local http = minetest.request_http_api()
 
 if not http then
-	error("geoip mod not in the trusted http mods!")
+	minetest.log("error", "geoip mod not in the trusted http mods!")
+	return
 end
 
 minetest.register_privilege("geoip", {
