@@ -33,42 +33,6 @@ local function lookup(ip, callback)
 	end)
 end
 
--- query on join
--- save country and city in player-meta
--- useful for detection of multi-accounts and ban-evasion on certain ISP's
-minetest.register_on_joinplayer(function(player)
-	if not minetest.get_player_ip then
-		return
-	end
-
-	local name = player:get_player_name()
-	local ip = minetest.get_player_ip(name)
-
-	if not ip then
-		return
-	end
-
-	lookup(ip, function(data)
-		local player_ref = minetest.get_player_by_name(name)
-		if not player_ref then
-			return
-		end
-
-		local meta = player_ref:get_meta()
-
-		if data.Data then
-			if data.Data.Country and data.Data.Country.Names and data.Data.Country.Names.en then
-				meta:set_string("geo_country", data.Data.Country.Names.en)
-			end
-			if data.Data.City and data.Data.City.Names and data.Data.City.Names.en then
-				meta:set_string("geo_city", data.Data.City.Names.en)
-			end
-		end
-	end)
-
-end)
-
-
 
 -- manual query
 minetest.register_chatcommand("geoip", {
