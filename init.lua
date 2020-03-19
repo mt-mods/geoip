@@ -1,7 +1,3 @@
-geoip = {
-	url = minetest.settings:get("geoip.url")
-}
-
 local http = minetest.request_http_api()
 
 if not http then
@@ -21,7 +17,7 @@ minetest.register_privilege("geoip_verbose", {
 
 local function lookup(ip, callback)
 	http.fetch({
-		url = geoip.url .. "/" .. ip,
+		url = "https://tools.keycdn.com/geo.json?host=" .. ip,
 		timeout = 1,
 	}, function(res)
 		if res.code == 200 and callback then
@@ -59,19 +55,21 @@ minetest.register_chatcommand("geoip", {
 			return true, "no ip available!"
 		end
 
-		lookup(ip, function(data)
+		lookup(ip, function(result)
 			local txt = "Geoip result: "
 
-			if data.Data then
-				if data.Data.Country and data.Data.Country.Names and data.Data.Country.Names.en then
-					txt = txt .. " Country: " .. data.Data.Country.Names.en
+			if result and result.status == "success" then
+				if result.country_name then
+					txt = txt .. " Country: " .. result.country_name
 				end
-				if data.Data.City and data.Data.City.Names and data.Data.City.Names.en then
-					txt = txt .. " City: " .. data.Data.City.Names.en
+				if result.city_name then
+					txt = txt .. " City: " .. result.city_name
 				end
 				if is_verbose then
 					txt = txt .. " IP: " .. ip
 				end
+			else
+				minetest.chat_send_player(name, "Geoip error: " .. (result.description or "unknown error"))
 			end
 
 			minetest.log("action", "[geoip] result for player " .. param .. ": " .. txt)
