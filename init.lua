@@ -58,12 +58,15 @@ minetest.register_chatcommand("geoip", {
 		lookup(ip, function(result)
 			local txt = "Geoip result: "
 
-			if result and result.status == "success" then
-				if result.country_name then
-					txt = txt .. " Country: " .. result.country_name
+			if result and result.status == "success" and result.data and result.data.geo then
+				if result.data.geo.country_name then
+					txt = txt .. " Country: " .. result.data.geo.country_name
 				end
-				if result.city_name then
-					txt = txt .. " City: " .. result.city_name
+				if result.data.geo.city then
+					txt = txt .. " City: " .. result.data.geo.city
+				end
+				if result.data.geo.timezone then
+					txt = txt .. " Timezone: " .. result.data.geo.timezone
 				end
 				if is_verbose then
 					txt = txt .. " IP: " .. ip
