@@ -18,6 +18,9 @@ minetest.register_privilege("geoip_verbose", {
 local function lookup(ip, callback)
 	http.fetch({
 		url = "https://tools.keycdn.com/geo.json?host=" .. ip,
+		extra_headers = {
+			"User-Agent: keycdn-tools:https://minetest.net"
+		},
 		timeout = 1,
 	}, function(res)
 		if res.code == 200 and callback then
