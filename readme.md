@@ -22,5 +22,4 @@ secure.http_mods = geoip
 
 ### privs
 
-* `geoip` geoip query with basic responses (country, city)
-* `geoip_verbose` geoip query with additional ip-address
+* `geoip` can make a geoip query

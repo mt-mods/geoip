@@ -10,11 +10,6 @@ minetest.register_privilege("geoip", {
 	give_to_singleplayer = false
 })
 
-minetest.register_privilege("geoip_verbose", {
-	description = "can do geoip lookups on players (with more infos)",
-	give_to_singleplayer = false
-})
-
 local function lookup(ip, callback)
 	http.fetch({
 		url = "https://tools.keycdn.com/geo.json?host=" .. ip,
@@ -46,8 +41,6 @@ minetest.register_chatcommand("geoip", {
 
 		minetest.log("action", "[geoip] Player " .. name .. " queries the player: " .. param)
 
-		local is_verbose = minetest.check_player_privs(name, {geoip_verbose = true})
-
 		if not minetest.get_player_ip then
 			return true, "minetest.get_player_ip no available!"
 		end
@@ -71,9 +64,13 @@ minetest.register_chatcommand("geoip", {
 				if result.data.geo.timezone then
 					txt = txt .. " Timezone: " .. result.data.geo.timezone
 				end
-				if is_verbose then
-					txt = txt .. " IP: " .. ip
+				if result.data.geo.asn then
+					txt = txt .. " ASN: " .. result.data.geo.asn
 				end
+				if result.data.geo.isp then
+					txt = txt .. " ISP: " .. result.data.geo.isp
+				end
+				txt = txt .. " IP: " .. ip
 			else
 				minetest.chat_send_player(name, "Geoip error: " .. (result.description or "unknown error"))
 			end
