@@ -10,7 +10,7 @@ minetest.register_privilege("geoip", {
 	give_to_singleplayer = false
 })
 
-local function lookup(ip, callback)
+function geoip.lookup(ip, callback)
 	http.fetch({
 		url = "https://tools.keycdn.com/geo.json?host=" .. ip,
 		extra_headers = {
@@ -51,7 +51,7 @@ minetest.register_chatcommand("geoip", {
 			return true, "no ip available!"
 		end
 
-		lookup(ip, function(result)
+		geoip.lookup(ip, function(result)
 			local txt = "Geoip result: "
 
 			if result and result.status == "success" and result.data and result.data.geo then
