@@ -29,6 +29,33 @@ function geoip.lookup(ip, callback)
 	end)
 end
 
+local function format_result(result)
+	if result and result.status == "success" and result.data and result.data.geo then
+		local txt = "Geoip result: "
+		if result.data.geo.country_name then
+			txt = txt .. " Country: " .. result.data.geo.country_name
+		end
+		if result.data.geo.city then
+			txt = txt .. " City: " .. result.data.geo.city
+		end
+		if result.data.geo.timezone then
+			txt = txt .. " Timezone: " .. result.data.geo.timezone
+		end
+		if result.data.geo.asn then
+			txt = txt .. " ASN: " .. result.data.geo.asn
+		end
+		if result.data.geo.isp then
+			txt = txt .. " ISP: " .. result.data.geo.isp
+		end
+		if result.data.geo.ip then
+			txt = txt .. " IP: " .. result.data.geo.ip
+		end
+		return txt
+	else
+		return false
+	end
+end
+
 -- function(name, result)
 geoip.joinplayer_callback = function() end
 
@@ -45,6 +72,12 @@ minetest.register_on_joinplayer(function(player)
 	end
 
 	geoip.lookup(ip, function(data)
+		-- log to debug.txt
+		local txt = format_result(data)
+		if txt then
+			minetest.log("action", "[geoip] result for player " .. name .. ": " .. txt)
+		end
+
 		-- execute callback
 		geoip.joinplayer_callback(name, data)
 	end)
@@ -74,27 +107,11 @@ minetest.register_chatcommand("geoip", {
 		end
 
 		geoip.lookup(ip, function(result)
-			local txt = "Geoip result: "
+			local txt = format_result(result)
 
-			if result and result.status == "success" and result.data and result.data.geo then
-				if result.data.geo.country_name then
-					txt = txt .. " Country: " .. result.data.geo.country_name
-				end
-				if result.data.geo.city then
-					txt = txt .. " City: " .. result.data.geo.city
-				end
-				if result.data.geo.timezone then
-					txt = txt .. " Timezone: " .. result.data.geo.timezone
-				end
-				if result.data.geo.asn then
-					txt = txt .. " ASN: " .. result.data.geo.asn
-				end
-				if result.data.geo.isp then
-					txt = txt .. " ISP: " .. result.data.geo.isp
-				end
-				txt = txt .. " IP: " .. ip
-			else
+			if not txt then
 				minetest.chat_send_player(name, "Geoip error: " .. (result.description or "unknown error"))
+				return
 			end
 
 			minetest.log("action", "[geoip] result for player " .. param .. ": " .. txt)
