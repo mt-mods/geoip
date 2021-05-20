@@ -5,6 +5,8 @@ if not http then
 	return
 end
 
+geoip = {}
+
 minetest.register_privilege("geoip", {
 	description = "can do geoip lookups on players",
 	give_to_singleplayer = false
