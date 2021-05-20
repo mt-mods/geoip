@@ -27,9 +27,20 @@ secure.http_mods = geoip
 # Api
 
 ```lua
+-- lookup command
 geoip.lookup("213.152.186.35", function(result)
-	--[[
-result = {
+	-- see "Geoip result data"
+end)
+
+-- overrideable callback on player join
+geoip.joinplayer_callback = function(playername, result)
+	-- see "Geoip result data"
+end
+```
+
+## Geoip result data
+```json
+{
   "status": "success",
   "description": "Data successfully received.",
   "data": {
@@ -55,6 +66,4 @@ result = {
     }
   }
 }
-	--]]
-end)
 ```

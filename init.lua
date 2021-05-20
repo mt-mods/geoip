@@ -27,6 +27,26 @@ function geoip.lookup(ip, callback)
 	end)
 end
 
+-- function(name, result)
+geoip.joinplayer_callback = function() end
+
+-- query ip on join, record in logs and execute callback
+minetest.register_on_joinplayer(function(player)
+	if not minetest.get_player_ip then
+		return
+	end
+
+	local name = player:get_player_name()
+	local ip = minetest.get_player_ip(name)
+	if not ip then
+		return
+	end
+
+	geoip.lookup(ip, function(data)
+		-- execute callback
+		geoip.joinplayer_callback(name, data)
+	end)
+end)
 
 -- manual query
 minetest.register_chatcommand("geoip", {
