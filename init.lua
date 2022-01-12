@@ -1,9 +1,14 @@
-local http = minetest.request_http_api()
+local http = QoS and QoS(minetest.request_http_api(), 1) or minetest.request_http_api()
 
 geoip = {}
 
-if not http then
-	minetest.log("error", "geoip mod not in the trusted http mods!")
+if not http or not minetest.get_player_ip then
+	minetest.log("error", "[geoip] not in the trusted http mods or minetest.get_player_ip not available!")
+	setmetatable(geoip, {
+		__index = function()
+			return function() minetest.log("warning", "[geoip] API disabled, see load time errors!") end
+		end
+	})
 	return
 end
 
@@ -22,33 +27,39 @@ function geoip.lookup(ip, callback)
 	}, function(res)
 		if res.code == 200 and callback then
 			local data = minetest.parse_json(res.data)
-			callback(data)
-		else
-			minetest.log("warning", "[geoip] http request returned status: " .. res.code)
+			if type(data) == "table" then
+				local result = type(data.data) == "table" and type(data.data.geo) == "table" and data.data.geo or {}
+				result.success = data.status == "success"
+				result.status = data.status
+				result.description = data.description
+				callback(result)
+				return
+			end
 		end
+		minetest.log("warning", "[geoip] http request returned status: " .. res.code)
 	end)
 end
 
 local function format_result(result)
-	if result and result.status == "success" and result.data and result.data.geo then
+	if result and result.success then
 		local txt = "Geoip result: "
-		if result.data.geo.country_name then
-			txt = txt .. " Country: " .. result.data.geo.country_name
+		if result.country_name then
+			txt = txt .. " Country: " .. result.country_name
 		end
-		if result.data.geo.city then
-			txt = txt .. " City: " .. result.data.geo.city
+		if result.city then
+			txt = txt .. " City: " .. result.city
 		end
-		if result.data.geo.timezone then
-			txt = txt .. " Timezone: " .. result.data.geo.timezone
+		if result.timezone then
+			txt = txt .. " Timezone: " .. result.timezone
 		end
-		if result.data.geo.asn then
-			txt = txt .. " ASN: " .. result.data.geo.asn
+		if result.asn then
+			txt = txt .. " ASN: " .. result.asn
 		end
-		if result.data.geo.isp then
-			txt = txt .. " ISP: " .. result.data.geo.isp
+		if result.isp then
+			txt = txt .. " ISP: " .. result.isp
 		end
-		if result.data.geo.ip then
-			txt = txt .. " IP: " .. result.data.geo.ip
+		if result.ip then
+			txt = txt .. " IP: " .. result.ip
 		end
 		return txt
 	else
@@ -56,18 +67,21 @@ local function format_result(result)
 	end
 end
 
--- function(name, result)
+-- function(name, result, last_login)
 geoip.joinplayer_callback = function() end
 
--- query ip on join, record in logs and execute callback
-minetest.register_on_joinplayer(function(player)
-	if not minetest.get_player_ip then
-		return
-	end
+-- function(name, result, last_login)
+local on_joinplayer_handlers = {}
+function geoip.register_on_joinplayer(fn)
+	table.insert(on_joinplayer_handlers, fn)
+end
 
+-- query ip on join, record in logs and execute callback
+minetest.register_on_joinplayer(function(player, last_login)
 	local name = player:get_player_name()
 	local ip = minetest.get_player_ip(name)
 	if not ip then
+		minetest.log("warning", "[geoip] get player IP address failed: " .. name)
 		return
 	end
 
@@ -76,10 +90,20 @@ minetest.register_on_joinplayer(function(player)
 		local txt = format_result(data)
 		if txt then
 			minetest.log("action", "[geoip] result for player " .. name .. ": " .. txt)
+		else
+			local msg = "Lookup failed for " .. name .. "@" .. ip .. " Reason: " .. tostring(data.description)
+			minetest.log("warning", "[geoip] ".. msg)
 		end
 
-		-- execute callback
-		geoip.joinplayer_callback(name, data)
+		-- execute registered event handler callbacks
+		for _,fn in ipairs(on_joinplayer_handlers) do
+			if fn(name, data, last_login) == true then
+				-- Event handler asked to stop propagation, bail out
+				return
+			end
+		end
+		-- execute function override callback
+		geoip.joinplayer_callback(name, data, last_login)
 	end)
 end)
 
@@ -95,10 +119,6 @@ minetest.register_chatcommand("geoip", {
 		end
 
 		minetest.log("action", "[geoip] Player " .. name .. " queries the player: " .. param)
-
-		if not minetest.get_player_ip then
-			return true, "minetest.get_player_ip no available!"
-		end
 
 		local ip = minetest.get_player_ip(param)
 
@@ -118,7 +138,6 @@ minetest.register_chatcommand("geoip", {
 
 			minetest.chat_send_player(name, txt)
 		end)
-
 
 	end
 })
