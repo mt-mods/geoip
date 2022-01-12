@@ -17,7 +17,25 @@ minetest.register_privilege("geoip", {
 	give_to_singleplayer = false
 })
 
+local cache_ttl = tonumber(minetest.settings:get("geoip.cache.ttl")) or 3600
+local cache = {}
+
+local function cleanup()
+	local expire = minetest.get_us_time() - (cache_ttl * 1000 * 1000)
+	for ip, data in pairs(cache) do
+		if expire > data.timestamp then
+			cache[ip] = nil
+		end
+	end
+end
+
 function geoip.lookup(ip, callback)
+	if cache[ip] then
+		-- Might return expired entries but that should not really matter here
+		callback(cache[ip])
+		cleanup()
+		return
+	end
 	http.fetch({
 		url = "https://tools.keycdn.com/geo.json?host=" .. ip,
 		extra_headers = {
@@ -32,6 +50,8 @@ function geoip.lookup(ip, callback)
 				result.success = data.status == "success"
 				result.status = data.status
 				result.description = data.description
+				result.timestamp = minetest.get_us_time()
+				cache[ip] = result
 				callback(result)
 				return
 			end
@@ -76,6 +96,29 @@ function geoip.register_on_joinplayer(fn)
 	table.insert(on_joinplayer_handlers, fn)
 end
 
+local on_prejoinplayer_handlers = {}
+function geoip.register_on_prejoinplayer(fn)
+	table.insert(on_prejoinplayer_handlers, fn)
+end
+
+minetest.register_on_prejoinplayer(function(name,ip)
+	-- Execute prejoin callbacks if we already know IP, this allows acting before account is created or joined
+	if cache[ip] then
+		minetest.log("info", "[geoip] executing prejoin callbacks: " .. name .. " (".. ip .. ")")
+		local auth_handler = minetest.get_auth_handler()
+		local auth = auth_handler.get_auth(name)
+		local last_login = auth and auth.last_login or nil
+		-- execute registered event handler callbacks
+		for _,fn in ipairs(on_prejoinplayer_handlers) do
+			local result = fn(name, cache[ip], last_login, auth)
+			if type(result) == "string" then
+				-- Event handler asked to stop propagation and disconnect player, bail out
+				return result
+			end
+		end
+	end
+end)
+
 -- query ip on join, record in logs and execute callback
 minetest.register_on_joinplayer(function(player, last_login)
 	local name = player:get_player_name()
@@ -102,6 +145,7 @@ minetest.register_on_joinplayer(function(player, last_login)
 				return
 			end
 		end
+
 		-- execute function override callback
 		geoip.joinplayer_callback(name, data, last_login)
 	end)
