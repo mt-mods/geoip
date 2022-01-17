@@ -68,9 +68,6 @@ local function format_result(result)
 end
 
 -- function(name, result, last_login)
-geoip.joinplayer_callback = function() end
-
--- function(name, result, last_login)
 local on_joinplayer_handlers = {}
 function geoip.register_on_joinplayer(fn)
 	table.insert(on_joinplayer_handlers, fn)
@@ -102,8 +99,6 @@ minetest.register_on_joinplayer(function(player, last_login)
 				return
 			end
 		end
-		-- execute function override callback
-		geoip.joinplayer_callback(name, data, last_login)
 	end)
 end)
 
