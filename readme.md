@@ -33,11 +33,6 @@ geoip.lookup("213.152.186.35", function(result)
 	-- see "Geoip result data"
 end)
 
--- overrideable callback on player join
-geoip.joinplayer_callback = function(playername, result, last_login)
-	-- see "Geoip result data"
-end
-
 -- event handler registration, `return true` will prevent overrideable callback and rest of event handlers to be called
 geoip.register_on_joinplayer(function(playername, result, last_login)
 	-- see "Geoip result data"
