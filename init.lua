@@ -178,7 +178,7 @@ minetest.register_chatcommand("geoip", {
 		local ip = minetest.get_player_ip(param)
 
 		if ip then
-			-- go through lookup if ip is available, this might still return cached result 
+			-- go through lookup if ip is available, this might still return cached result
 			geoip.lookup(ip, function(result)
 				report_result(name, param, result)
 			end, param)
