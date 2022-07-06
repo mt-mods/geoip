@@ -57,7 +57,7 @@ function geoip.lookup(ip, callback, playername)
 				result.status = data.status
 				result.description = data.description
 				result.timestamp = minetest.get_us_time()
-				result.players = playername and {playername=1} or {}
+				result.players = playername and {[playername]=1} or {}
 				cache[ip] = result
 				callback(result)
 				return
