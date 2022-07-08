@@ -184,11 +184,9 @@ minetest.register_chatcommand("geoip", {
 			end, param)
 		else
 			for _, result in pairs(cache) do
-				for playername in pairs(result.players) do
-					if playername == param then
-						report_result(name, param, result)
-						return
-					end
+				if result.players[param] then
+					report_result(name, param, result)
+					return
 				end
 			end
 			return true, "no ip or cached result available!"
