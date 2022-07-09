@@ -17,23 +17,29 @@ minetest.register_privilege("geoip", {
 	give_to_singleplayer = false
 })
 
-local cache_ttl = tonumber(minetest.settings:get("geoip.cache.ttl")) or 3600
+-- Default TTL for cached results: 3 hours
+local cache_ttl = tonumber(minetest.settings:get("geoip.cache.ttl")) or 10800
 local cache = {}
 
-local function cleanup()
+-- Execute cache cleanup every cache_ttl seconds
+local function cache_cleanup()
 	local expire = minetest.get_us_time() - (cache_ttl * 1000 * 1000)
 	for ip, data in pairs(cache) do
 		if expire > data.timestamp then
 			cache[ip] = nil
 		end
 	end
+	minetest.after(cache_ttl, cache_cleanup)
 end
+minetest.after(cache_ttl, cache_cleanup)
 
-function geoip.lookup(ip, callback)
+-- Main geoip lookup function, callback function gets result table as first argument
+function geoip.lookup(ip, callback, playername)
 	if cache[ip] then
-		-- Might return expired entries but that should not really matter here
+		if playername and not cache[ip].players[playername] then
+			cache[ip].players[playername] = 1
+		end
 		callback(cache[ip])
-		cleanup()
 		return
 	end
 	http.fetch({
@@ -51,6 +57,7 @@ function geoip.lookup(ip, callback)
 				result.status = data.status
 				result.description = data.description
 				result.timestamp = minetest.get_us_time()
+				result.players = playername and {[playername]=1} or {}
 				cache[ip] = result
 				callback(result)
 				return
@@ -142,8 +149,18 @@ minetest.register_on_joinplayer(function(player, last_login)
 				return
 			end
 		end
-	end)
+	end, name)
 end)
+
+local function report_result(name, param, result)
+	local txt = format_result(result)
+	if not txt then
+		minetest.chat_send_player(name, "Geoip error: " .. (result.description or "unknown error"))
+		return
+	end
+	minetest.log("action", "[geoip] result for player " .. param .. ": " .. txt)
+	minetest.chat_send_player(name, txt)
+end
 
 -- manual query
 minetest.register_chatcommand("geoip", {
@@ -160,22 +177,20 @@ minetest.register_chatcommand("geoip", {
 
 		local ip = minetest.get_player_ip(param)
 
-		if not ip then
-			return true, "no ip available!"
-		end
-
-		geoip.lookup(ip, function(result)
-			local txt = format_result(result)
-
-			if not txt then
-				minetest.chat_send_player(name, "Geoip error: " .. (result.description or "unknown error"))
-				return
+		if ip then
+			-- go through lookup if ip is available, this might still return cached result
+			geoip.lookup(ip, function(result)
+				report_result(name, param, result)
+			end, param)
+		else
+			for _, result in pairs(cache) do
+				if result.players[param] then
+					report_result(name, param, result)
+					return
+				end
 			end
-
-			minetest.log("action", "[geoip] result for player " .. param .. ": " .. txt)
-
-			minetest.chat_send_player(name, txt)
-		end)
+			return true, "no ip or cached result available!"
+		end
 
 	end
 })
