@@ -153,7 +153,7 @@ minetest.register_on_joinplayer(function(player, last_login)
 	end, name)
 end)
 
-local function format_result(name, result)
+local function format_message(name, result)
 	local txt = format_result(result)
 	if not txt then
 		return "Geoip error: " .. (result.description or "unknown error")
@@ -180,7 +180,7 @@ minetest.register_chatcommand("geoip", {
 		if ip then
 			-- go through lookup if ip is available, this might still return cached result
 			geoip.lookup(ip, function(result)
-				minetest.chat_send_player(name, format_result(param, result))
+				minetest.chat_send_player(name, format_message(param, result))
 			end, param)
 		else
 			local formatted_results = {}
@@ -189,7 +189,7 @@ minetest.register_chatcommand("geoip", {
 				if result.players[param] then
 					table.insert(formatted_results, {
 						time = now - result.players[param],
-						txt = format_result(param, result)
+						txt = format_message(param, result)
 					})
 				end
 			end
