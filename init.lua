@@ -37,7 +37,7 @@ minetest.after(cache_ttl, cache_cleanup)
 function geoip.lookup(ip, callback, playername)
 	if cache[ip] then
 		if playername and not cache[ip].players[playername] then
-			cache[ip].players[playername] = 1
+			cache[ip].players[playername] = minetest.get_us_time()
 		end
 		callback(cache[ip])
 		return
@@ -52,12 +52,13 @@ function geoip.lookup(ip, callback, playername)
 		if res.code == 200 and callback then
 			local data = minetest.parse_json(res.data)
 			if type(data) == "table" then
+				local timestamp = minetest.get_us_time()
 				local result = type(data.data) == "table" and type(data.data.geo) == "table" and data.data.geo or {}
 				result.success = data.status == "success"
 				result.status = data.status
 				result.description = data.description
-				result.timestamp = minetest.get_us_time()
-				result.players = playername and {[playername]=1} or {}
+				result.timestamp = timestamp
+				result.players = playername and {[playername]=timestamp} or {}
 				cache[ip] = result
 				callback(result)
 				return
@@ -152,14 +153,13 @@ minetest.register_on_joinplayer(function(player, last_login)
 	end, name)
 end)
 
-local function report_result(name, param, result)
+local function format_result(name, result)
 	local txt = format_result(result)
 	if not txt then
-		minetest.chat_send_player(name, "Geoip error: " .. (result.description or "unknown error"))
-		return
+		return "Geoip error: " .. (result.description or "unknown error")
 	end
-	minetest.log("action", "[geoip] result for player " .. param .. ": " .. txt)
-	minetest.chat_send_player(name, txt)
+	minetest.log("action", "[geoip] result for player " .. name .. ": " .. txt)
+	return txt
 end
 
 -- manual query
@@ -180,14 +180,33 @@ minetest.register_chatcommand("geoip", {
 		if ip then
 			-- go through lookup if ip is available, this might still return cached result
 			geoip.lookup(ip, function(result)
-				report_result(name, param, result)
+				minetest.chat_send_player(name, format_result(param, result))
 			end, param)
 		else
+			local formatted_results = {}
+			local now = minetest.get_us_time()
 			for _, result in pairs(cache) do
 				if result.players[param] then
-					report_result(name, param, result)
-					return
+					table.insert(formatted_results, {
+						time = now - result.players[param],
+						txt = format_result(param, result)
+					})
 				end
+			end
+			local count = #formatted_results
+			if count > 0 then
+				table.sort(formatted_results, function(a,b)
+					return a.time > b.time
+				end)
+				local msg = ""
+				for i = 1, count do
+					local s = math.floor(formatted_results[i].time / 1000000)
+					local m = math.floor(s / 60) % 60
+					local h = math.floor(s / 60 / 60)
+					local time = ("%dh %dm %ds ago: "):format(h, m, s % 60)
+					msg = msg .. time .. formatted_results[i].txt .. (i < count and "\n" or "")
+				end
+				return true, msg
 			end
 			return true, "no ip or cached result available!"
 		end
