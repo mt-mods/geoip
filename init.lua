@@ -162,6 +162,35 @@ local function format_message(name, result)
 	return txt
 end
 
+local function format_matches_by_name(name) {
+	local formatted_results = {}
+	local now = minetest.get_us_time()
+	local count = 0
+	for _, result in pairs(cache) do
+		if result.players[name] then
+			table.insert(formatted_results, {
+				time = now - result.players[name],
+				txt = format_message(name, result)
+			})
+			count = count + 1
+		end
+	end
+	if count > 0 then
+		table.sort(formatted_results, function(a,b)
+			return a.time > b.time
+		end)
+		local msg = ""
+		for i = 1, count do
+			local s = math.floor(formatted_results[i].time / 1000000)
+			local m = math.floor(s / 60) % 60
+			local h = math.floor(s / 60 / 60)
+			local time = ("%dh %dm %ds ago: "):format(h, m, s % 60)
+			msg = msg .. time .. formatted_results[i].txt .. (i < count and "\n" or "")
+		end
+		return msg
+	end
+}
+
 -- manual query
 minetest.register_chatcommand("geoip", {
 	params = "<playername>",
@@ -179,36 +208,13 @@ minetest.register_chatcommand("geoip", {
 
 		if ip then
 			-- go through lookup if ip is available, this might still return cached result
-			geoip.lookup(ip, function(result)
-				minetest.chat_send_player(name, format_message(param, result))
+			geoip.lookup(ip, function()
+				local msg = format_matches_by_name(param) or "No matching geoip results found."
+				minetest.chat_send_player(name, msg)
 			end, param)
 		else
-			local formatted_results = {}
-			local now = minetest.get_us_time()
-			for _, result in pairs(cache) do
-				if result.players[param] then
-					table.insert(formatted_results, {
-						time = now - result.players[param],
-						txt = format_message(param, result)
-					})
-				end
-			end
-			local count = #formatted_results
-			if count > 0 then
-				table.sort(formatted_results, function(a,b)
-					return a.time > b.time
-				end)
-				local msg = ""
-				for i = 1, count do
-					local s = math.floor(formatted_results[i].time / 1000000)
-					local m = math.floor(s / 60) % 60
-					local h = math.floor(s / 60 / 60)
-					local time = ("%dh %dm %ds ago: "):format(h, m, s % 60)
-					msg = msg .. time .. formatted_results[i].txt .. (i < count and "\n" or "")
-				end
-				return true, msg
-			end
-			return true, "no ip or cached result available!"
+			local msg = format_matches_by_name(param) or "No ip or cached result available."
+			return true, msg
 		end
 
 	end
