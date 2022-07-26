@@ -162,7 +162,7 @@ local function format_message(name, result)
 	return txt
 end
 
-local function format_matches_by_name(name) {
+local function format_matches_by_name(name)
 	local formatted_results = {}
 	local now = minetest.get_us_time()
 	local count = 0
@@ -189,7 +189,7 @@ local function format_matches_by_name(name) {
 		end
 		return msg
 	end
-}
+end
 
 -- manual query
 minetest.register_chatcommand("geoip", {
