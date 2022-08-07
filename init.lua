@@ -95,14 +95,15 @@ local function format_result(result)
 	end
 end
 
--- function(name, result, last_login)
 local on_joinplayer_handlers = {}
 function geoip.register_on_joinplayer(fn)
+	assert(type(fn) == "function", "geoip.register_on_joinplayer expects function as a first argument")
 	table.insert(on_joinplayer_handlers, fn)
 end
 
 local on_prejoinplayer_handlers = {}
 function geoip.register_on_prejoinplayer(fn)
+	assert(type(fn) == "function", "geoip.register_on_prejoinplayer expects function as a first argument")
 	table.insert(on_prejoinplayer_handlers, fn)
 end
 
