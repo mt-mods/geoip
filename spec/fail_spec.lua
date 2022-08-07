@@ -5,6 +5,7 @@ mineunit("player")
 mineunit("common/after")
 mineunit("server")
 mineunit("http")
+mineunit("auth")
 
 fixture("geoip_server")
 
