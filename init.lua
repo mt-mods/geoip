@@ -178,7 +178,7 @@ local function format_matches_by_name(name)
 	end
 	if count > 0 then
 		table.sort(formatted_results, function(a,b)
-			return a.time > b.time
+			return a.time < b.time
 		end)
 		local msg = ""
 		for i = 1, count do
