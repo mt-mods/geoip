@@ -12,8 +12,11 @@ powered by [IP Location Finder by KeyCDN](https://tools.keycdn.com/geo)
 
 ### minetest.conf
 ```
-# enable curl/http on that mod
+# enable curl/http on that mod, required for geoip mod
 secure.http_mods = geoip
+
+# geoip result cache time-to-live value, default is 3 hours
+geoip.cache.ttl = 10800
 ```
 
 ### Commands
@@ -28,14 +31,31 @@ secure.http_mods = geoip
 # Api
 
 ```lua
--- lookup command
+-- Geoip lookup command
 geoip.lookup("213.152.186.35", function(result)
-	-- see "Geoip result data"
+	-- See "Geoip result data"
 end)
 
--- event handler registration, `return true` will prevent overrideable callback and rest of event handlers to be called
+-- Event handler registration
 geoip.register_on_joinplayer(function(playername, result, last_login)
-	-- see "Geoip result data"
+  -- See "Geoip result data" for example result.
+  if result.asn == 65535 then
+    minetest.after(0, function()
+      minetest.kick_player(playername, "No joining from reserved unused ASN")
+    end)
+    -- Return `true` to stop event handler propagation, should be used if player will be forcibly disconnected
+    return true
+  end
+end)
+
+-- Event handler registration
+geoip.register_on_prejoinplayer(function(playername, result, last_login, auth_data)
+  -- Only called if data is alre4ady cached.
+  -- See "Geoip result data" for example result.
+  if result.asn == 65535 then
+    -- Return string to disconnect player with that string as a reason.
+    return "No joining from reserved unused ASN"
+  end
 end)
 ```
 
